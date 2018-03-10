@@ -1,0 +1,65 @@
+Design Document:
+
+Major Data Structures Used:
+
+	Index: A global variable called inverted_index
+			Python data type:  Dictionary
+			Keys:    	   All the words contained in any of the documents
+			Values:	 	   A sorted list of docId's in which the words (keys) are contained
+
+	Vectors of all Documents: A global variable called vects_for_docs
+			Python data type:  list
+			Each item is:	   A vector representing the document, implemented as:
+						Python data type:  Dictionary
+						Kyes:		   Tokenized and normalized words of the document
+						Values: 	   (a) Once the iterate_over_all_docs() function is executed, values are the frequency of the corresponding words (keys) in the document
+								   (b) Then when the create_tf_idf_vector() function is executed, the values are updated to the tf-idf scores for the corresponding words (keys) in the document
+
+	Document frequency of all words: a global variable called document_freq_vect
+			Python data type: Dictionary
+			Keys:		  All the words contained in any of the documents
+			Values:		  Number of documents in which the word occurs
+
+
+
+
+Basic explanation and sequence of code execution:
+
+1. Creation of list of vectors for all documents and the inverted index
+	iterate_over_all_docs(): This is the first function that is executed.It updates the vects_for_docs variable with vectors of all the documents.
+
+	generate_inverted_index(): This executes next. The name of the function is self explanatory, it generates and inverted index in the global variable inverted_index, however, precondition is that vects_for_docs should be completely initialized
+
+	create_tf_idf_vector(): This executes next. This function updates the vects_for_docs global variable (the list of frequency vectors for all the documents) and changes all the frequency vectors to tf-idf unit vectors (tf-idf score instead of frequency of the words)
+
+
+
+
+
+
+
+
+2. Input of query from user:
+The following code is present in the query while True loop:
+
+
+while True:
+    query = input("Please enter your query....")
+    if len(query) == 0
+        break
+    query_list = get_tokenized_and_normalized_list(query)
+    query_vector = create_vector_from_query(query_list)
+    get_tf_idf_from_query_vect(query_vector)
+    result_set = get_result_from_query_vect(query_vector)
+
+    for tup in result_set:
+        print("The docid is " + str(tup[0]) + " and the weight is " + str(tup[1]))
+
+Explanation of functions:
+	get_tokenized_and_normalized_list(): This function returns a list of tokenized and stemmed words of any text
+
+	create_vector_from_query(l1): Creates a vector from a query in the form of a list (l1) , vector is a dictionary, containing words:frequency pairs
+
+	get_tf_idf_from_query_vect(query_vect): as the name suggests, this function converts a given query vector into a tf-idf unit vector(word:tf-idf vector given a word:frequency vector
+
+	get_result_from_query_vect(query_vector): this function takes the dot product of the query with all the documents and returns a sorted list of tuples of docId, cosine score pairs
