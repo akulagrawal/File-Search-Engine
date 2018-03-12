@@ -6,6 +6,7 @@ from pathlib import Path
 import json
 from math import log2
 import time
+from autocorrect import spell
 # import copy
 
 
@@ -77,14 +78,13 @@ class FileIndexing:
                 continue
             with open(url, 'r', errors='ignore') as f:
                 counter = 1
-                wordcounter = 1
+                wordcounter = 0
                 # print(time.time())
                 for str1 in f:
                     words = self.get_text_only(str1)
-                    doclength = len(words)
-                    doclist[url] = doclength
 
                     for word in words:
+                        wordcounter += 1
                         if word in toignore:
                             continue
 
@@ -108,8 +108,9 @@ class FileIndexing:
                             wordloclist[word] = {}
                             wordloclist[word][url] = []
                             wordloclist[word][url].append([wordcounter, counter])
-                        wordcounter += 1
+
                     counter += 1
+                doclist[url] = wordcounter
                 # print(time.time())
                 # print('')
 
@@ -133,11 +134,28 @@ class Search:
             self.wordlist = json.load(json_data)
         with open(wordloclist, 'r') as json_data:
             self.wordloclist = json.load(json_data)
+        self.list_querywords = {}
+        self.doc_for_phrasequery = {}
+        self.stemmed = []
 
     def get_text_only(self, textdata):
         splitter = re.compile('\\W+')
         xp = splitter.split(textdata)
         tokens = [s.lower() for s in xp if s != '']
+        correctedtoken = []
+        refinedquery = ""
+        anychange = False
+        for word in tokens:
+            xp = spell(word)
+            # print(xp,word)
+            if xp != word:
+                anychange = True
+            refinedquery = refinedquery + " " + xp
+            correctedtoken.append(xp)
+        if anychange:
+            confirm = input("Did u mean :"+refinedquery+" ? Enter 'y' to confirm...")
+            if confirm == 'y':
+                tokens = correctedtoken
         # data = ""
         # for word in alphanum:
         #     data = data + " " + word
@@ -147,6 +165,8 @@ class Search:
         stemmed = []
         for words in tokens:
             stemmed.append(ps.stem(words))
+        self.list_querywords = dict(zip(stemmed, tokens))
+        self.stemmed = stemmed
         return stemmed
 
     def total_length(self):
@@ -158,7 +178,9 @@ class Search:
         return avgdl, numdocs
 
     def query(self, q):
-        words = self.get_text_only(q)
+        self.phrasequery(q, printing=False)
+        start_time = time.time()
+        words = self.stemmed
         doclist = {}
         nqlist = {}
         lll = len(words)
@@ -168,42 +190,45 @@ class Search:
                 pos = self.wordloclist[word]
                 for docs in pos:
                     if docs in doclist:
-                        # print(doclist[docs])
                         if word in doclist[docs]:
-                            # print("\n\n\n")
                             continue
                         else:
-                            # sst = {}
-                            # sst[word] = pos[docs]
                             doclist[docs][word] = pos[docs]
                     else:
-                        # print(docs)
                         doclist[docs] = {}
-                        # sst = {}
-                        # sst[word] = pos[docs]
-                        # print(sst)
                         doclist[docs][word] = pos[docs]
-                        # print(doclist[docs])
             else:
                 nqlist[word] = 0
         # print(doclist)
         if len(doclist) == 0:
             print("Not found!!")
-            return 0
+            return
         scoring = self.partialokapi(doclist=doclist, nqlist=nqlist, querylen=lll)
 
         sortscore = sorted(scoring, key=scoring.get, reverse=True)
         # print(sortscore)
         pq = "file:///home/sujoy/PycharmProjects/searchengine2"
         numberofdoc = len(sortscore)
+        end_time = time.time()
+        print("Found %d results in %f seconds\n" % (numberofdoc, end_time-start_time))
+        counter = 0
         for x in sortscore:
+            if counter == 10:
+                usercomm = input("Press 'y' to see next 20 results...\n")
+                if usercomm == 'y':
+                    counter = 0
+                else:
+                    return
+
             print("filename : ", (pq+x[1:]))
             print("Positions of words :")
             for word in doclist[x]:
-                print(word+" : ", [y[1] for y in doclist[x][word]])
+                print(self.list_querywords[word]+" : ", [y[1] for y in doclist[x][word]])
+            if x in self.doc_for_phrasequery:
+                print("Query found together at linenumber(s) :",self.doc_for_phrasequery[x])
             print("Score : ", scoring[x])
             print("\n")
-        return numberofdoc
+            counter += 1
 
     def intersectlists(self, lists):
         if len(lists) == 0:
@@ -214,8 +239,9 @@ class Search:
         mm = set(lists[0]).intersection(*lists)
         return list(mm)
 
-    def phrasequery(self, q):
+    def phrasequery(self, q, printing=True):
         words = self.get_text_only(q)
+        start_time = time.time()
         doclist = {}
         nqlist = {}
         wordll = []
@@ -226,7 +252,8 @@ class Search:
                 app = [x for x in self.wordlist[word] if x != 'predoc']
                 wordll.append(app)
             else:
-                print("Not found!!")
+                if printing:
+                    print("Not found!!")
                 return
         finaldocs = self.intersectlists(wordll)
         # print(finaldocs)
@@ -260,6 +287,9 @@ class Search:
                 # print(resultant)
                 linenum[docs] = [locationdict[x] for x in resultant]
                 results[docs] = len(resultant)
+        if printing is False:
+            self.doc_for_phrasequery = linenum
+            return
 
         if len(results) == 0:
             print("Nothing found")
@@ -269,11 +299,13 @@ class Search:
         # print(sortscore)
         pq = "file:///home/sujoy/PycharmProjects/searchengine2"
         numberofdoc = len(sortscore)
+        end_time = time.time()
+        print("Found %d results in %f seconds\n" % (numberofdoc, end_time-start_time))
         for x in sortscore:
             print("filename : ", (pq + x[1:]))
             print("line number(s) :", linenum[x])
             print("Score : ", scoring[x])
-        return numberofdoc
+        # return numberofdoc, (end_time-start_time)
 
     def phraseokapi(self, doclist, k=1.2, b=0.75, delta=1.0):
         avgdl, n = self.total_length()
@@ -349,10 +381,8 @@ sp = Search(docfile, wordfile, wordlocfile)
 query = input("Please enter your query....")
 if query != '':
     print('You queried for "%s" (enclose under "." for full-phrase query) : ' % query)
-    start_time = time.time()
     if query.startswith('"') and query.endswith('"'):
-        number = sp.phrasequery(query)
+        sp.phrasequery(query)
     else:
-        number = sp.query(query)
-    end_time = time.time()
-    print("Found %d results in %f seconds" % (number, end_time-start_time))
+        sp.query(query)
+
