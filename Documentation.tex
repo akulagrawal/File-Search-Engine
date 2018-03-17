@@ -1,0 +1,130 @@
+% --------------------------------------------------------------
+% This is all preamble stuff that you don't have to worry about.
+% Head down to where it says "Start here"
+% --------------------------------------------------------------
+ 
+\documentclass[12pt]{article}
+ 
+\usepackage[margin=1in]{geometry} 
+\usepackage{amsmath,amsthm,amssymb}
+\usepackage{tabto}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{underscore}
+\usepackage[bookmarks=true]{hyperref}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+ 
+\newenvironment{theorem}[2][Theorem]{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1}\hskip \labelsep {\bfseries #2.}]}{\end{trivlist}}
+\newenvironment{lemma}[2][Lemma]{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1}\hskip \labelsep {\bfseries #2.}]}{\end{trivlist}}
+\newenvironment{exercise}[2][Exercise]{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1}\hskip \labelsep {\bfseries #2.}]}{\end{trivlist}}
+\newenvironment{reflection}[2][Reflection]{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1}\hskip \labelsep {\bfseries #2.}]}{\end{trivlist}}
+\newenvironment{proposition}[2][Proposition]{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1}\hskip \labelsep {\bfseries #2.}]}{\end{trivlist}}
+\newenvironment{corollary}[2][Corollary]{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1}\hskip \labelsep {\bfseries #2.}]}{\end{trivlist}}
+ 
+\begin{document}
+ 
+% --------------------------------------------------------------
+%                         Start here
+% --------------------------------------------------------------
+ 
+%\renewcommand{\qedsymbol}{\filledbox}
+ 
+\title{Document Search Engine}%replace X with the appropriate number
+\author{Mitansh Jain - 160101042\\
+Sujoy Ghosh - 160101073\\
+Akul Agrawal - 160101085\\%replace winth your name
+System Programming Lab} %if necessary, replace with your course title
+ 
+\maketitle
+
+\section{Salient Features}
+\begin{itemize}
+\item[•]Traditional indexing and searching algorithm for answering any query.
+\item[•]Option for both searches phrase query and free text query.
+\item[•]Printing lines in which query is present and highlighting words from query. 
+\item[•]Document ranking with respect to the query
+\item[•]Spell check and probable suggestions for the query
+\end{itemize}
+
+\section{Indexing}
+\subsection{Data Structures and Algorithm}
+First, the program goes through all the text files in directory. All the words are stemmed using nltk.stemmer(). Now three dictionaries are maintained:
+\begin{itemize}
+\item[] \textit{wordlist} : This dictionary stores the number of occurrences of a word in a file.
+\item[] \textit{wordloclist} : This dictionary stores all the locations of a word in a file. The location includes the line number and position of the word in that line.
+\item[] \textit{doclist} : This dictionary stores the number of words in a document corresponding to its name.
+\end{itemize}
+These files are converted into binary files using the pickle library.
+This is done to prevent time wastage on re-indexing of already indexed
+files. Thus, on each run time of the program, only those files are
+indexed which are new and have not been indexed before. Binary files
+have been used to increase efficiency.
+
+\subsection{Time Complexity}
+All the files are opened using open() function in python. Time taken in indexing can be given in following way:\\
+\begin{itemize}
+\item[]\textit{Time} = O((number of files)*(number of lines)*(number of words in lines)*(time taken in stemming one word)*(access time of python list))\\
+= O((total sum of number of words in all files)*(time taken in stemming one word)*(access time)) 
+\item[]\textit{Time taken in stemming each word using porter stemming algorithm} = O(7) = constant
+\item[]\textit{Access time of python dictionary by amortized analysis} = O(1)
+\item[]\textit{Net time complexity} = O(total number of words in all docs)
+\end{itemize}
+
+
+\section{Searching and Ranking}
+\subsection{Data Structures and Algorithms}
+For finding phrases' lists wordloclist created earlier is used for each word and intersection is taken to see at what all places all words occur together. Then all the other partial phrases are considered.\\
+Ranking of documents is done using following Okapi BM25 formula:
+\begin{itemize}
+\item[] $\displaystyle {\text{score}}(D,Q)=\sum _{i=1}^{n}{\text{IDF}}(q_{i})\cdot {\frac {f(q_{i},D)\cdot (k_{1}+1)}{f(q_{i},D)+k_{1}\cdot \left(1-b+b\cdot {\frac {|D|}{\text{avgdl}}}\right)}}\\$
+\item[] $\text{IDF}(q_i) = \log \frac{N}{n}$
+\end{itemize}
+
+where,
+\begin{itemize}
+\item[]D is document to be ranked
+\item[]Q is query respect to which document is ranked 
+\item[]$q_{i}$ represents i\textsuperscript{th}  word of query.
+\item[]k\textsubscript{1} is constant = 1.2
+\item[]b is constant = 0.75
+\end{itemize}
+
+\subsection{Time complexity} 
+Calculating time complexity has two parts first for answering query and then ranking documents in which query i present.
+
+\begin{itemize}
+\item[]$\text{Average time complexity for query} = O(\text{Ql}) + O(Sd*\text{number of times in query}) + O((\log(\text{average doc length}))*Sd) + O(Sd*Ql* \text{average document length}+$ O(summation of lines throughout all docs in which query is present))\\
+$\approx O(Sd*\text{average document length})$
+
+\item[] Time complexity for ranking = $O(Sd)$
+
+\end{itemize}
+
+where,
+\begin{itemize}
+\item[]Sd is the number of documents in which query is present
+\item[]Ql is length of query
+\end{itemize}
+
+
+
+% \sum_{i=1}^{k+1}i & = \left(\sum_{i=1}^{k}i\right) +(k+1)\\ 
+% & = \frac{k(k+1)}{2}+k+1 & (\text{by inductive hypothesis})\\
+% & = \frac{k(k+1)+2(k+1)}{2}\\
+% & = \frac{(k+1)(k+2)}{2}\\
+% & = \frac{(k+1)((k+1)+1)}{2}.
+ 
+% --------------------------------------------------------------
+%     You don't have to mess with anything below this line.
+% --------------------------------------------------------------
+ 
+\end{document}
