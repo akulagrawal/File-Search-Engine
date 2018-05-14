@@ -18,5 +18,9 @@ OS Requirements
 
 Usage
 ---------------------------------------------------------------------------------------------------
-* Open terminal in the repo folder and run "python3 <file_name>" where filename is "final_search_engine_with_binary_files.py" or
-  "final_search_engine_with_text_files.py"
+Open terminal in the repo folder and run "python3 <file_name>" where file_name is "final_search_engine_with_binary_files.py" or "final_search_engine_with_text_files.py"
+
+
+Impelementation Details
+---------------------------------------------------------------------------------------------------
+Refer to "Documentation.pdf" for Data Structures and Algorithms used
